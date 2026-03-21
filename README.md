@@ -13,6 +13,7 @@ Projeto fullstack desenvolvido com **ASP.NET Core 8**, **Angular 17** e **SQLite
 | Banco de dados | SQLite + Entity Framework Core |
 | Autenticação | JWT Bearer + BCrypt |
 | Frontend | Angular 17 (Standalone Components) |
+| Testes | xUnit + FluentAssertions + EF InMemory |
 | Documentação | Swagger / OpenAPI |
 
 ---
@@ -43,13 +44,21 @@ AutoManager/
 │   ├── Program.cs
 │   └── appsettings.json
 │
+├── AutoManager.Tests/                # Testes unitários
+│   ├── Helpers/
+│   │   └── DbHelper.cs               # Banco em memória isolado por teste
+│   └── Services/
+│       ├── AuthServiceTests.cs       # 5 testes
+│       ├── ClienteServiceTests.cs    # 9 testes
+│       └── OrdemServicoServiceTests.cs # 10 testes
+│
 └── automanager-web/                  # Frontend Angular
     └── src/app/
-        ├── models/models.ts          # Interfaces TypeScript
+        ├── models/models.ts
         ├── services/
         │   ├── auth.service.ts
         │   ├── cliente.service.ts
-        │   └── ordem.service.ts      # Veículos + OS
+        │   └── ordem.service.ts
         ├── interceptors/
         │   └── auth.interceptor.ts   # Injeta JWT automaticamente
         ├── guards/
@@ -111,6 +120,19 @@ ng serve
 
 Acesse o sistema em: **http://localhost:4200**
 
+### Testes
+
+```bash
+# Entre na pasta de testes
+cd auto-manager/AutoManager.Tests
+
+# Execute todos os testes
+dotnet test
+
+# Com resultado detalhado
+dotnet test --verbosity normal
+```
+
 ---
 
 ## Autenticação
@@ -166,7 +188,6 @@ Para testar diretamente no Swagger:
 
 - [ ] Filtros e paginação nas listagens
 - [ ] Relatórios com queries estilo PL/SQL
-- [ ] Testes unitários com xUnit (backend) e Jasmine (frontend)
 - [ ] Docker / docker-compose para facilitar o setup
 - [ ] Deploy com CI/CD
 
