@@ -1,19 +1,20 @@
 # ─── .NET ─────────────────────────────────────────────────────────────────────
-bin/
-obj/
+AutoManager.API/bin/
+AutoManager.API/obj/
+AutoManager.API/*.db
+AutoManager.API/*.db-shm
+AutoManager.API/*.db-wal
+AutoManager.Tests/bin/
+AutoManager.Tests/obj/
+.vs/
 *.user
 *.suo
-.vs/
-*.db
-*.db-shm
-*.db-wal
-automanager.db
 
 # ─── Angular ──────────────────────────────────────────────────────────────────
-node_modules/
-dist/
-.angular/
-*.js.map
+automanager-web/node_modules/
+automanager-web/dist/
+automanager-web/.angular/
+automanager-web/*.js.map
 
 # ─── Scripts locais ───────────────────────────────────────────────────────────
 reorganizar.ps1
