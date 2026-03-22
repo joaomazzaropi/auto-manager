@@ -2,12 +2,13 @@ import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { OrdemService, VeiculoService } from '../../services/ordem.service';
-import { OrdemServico, CreateOrdemDto, StatusOrdem, Veiculo } from '../../models/models';
+import { OrdemServico, CreateOrdemDto, StatusOrdem, Veiculo, PagedResult } from '../../models/models';
+import { PaginacaoComponent } from '../../components/paginacao/paginacao.component';
 
 @Component({
   selector: 'app-ordens',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, PaginacaoComponent],
   template: `
     <div>
       <div class="page-header">
@@ -15,23 +16,41 @@ import { OrdemServico, CreateOrdemDto, StatusOrdem, Veiculo } from '../../models
         <button class="btn btn-primary" (click)="abrirModalNova()">+ Nova OS</button>
       </div>
 
-      <!-- Filtro de status ──────────────────────────────── -->
-      <div class="filtros card" style="margin-bottom:16px;padding:14px 20px">
-        <span style="font-size:13px;font-weight:600;color:var(--text-muted)">Filtrar por status:</span>
-        @for (s of statusOpcoes; track s.valor) {
-          <button class="btn btn-sm"
-                  [class.btn-primary]="filtroAtivo === s.valor"
-                  [class.btn-outline]="filtroAtivo !== s.valor"
-                  (click)="filtrar(s.valor)">
-            {{ s.label }}
-          </button>
-        }
+      <!-- Filtros ─────────────────────────────────────── -->
+      <div class="card filtros-card">
+        <div class="filtros-grid">
+          <div class="form-group">
+            <label>Status</label>
+            <select class="form-control" [(ngModel)]="filtros.status">
+              <option value="">Todos</option>
+              <option value="Aberta">Aberta</option>
+              <option value="EmAndamento">Em Andamento</option>
+              <option value="Concluida">Concluída</option>
+              <option value="Cancelada">Cancelada</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Cliente</label>
+            <input class="form-control" [(ngModel)]="filtros.cliente"
+                   placeholder="Nome do cliente..." (keyup.enter)="buscar()" />
+          </div>
+          <div class="form-group">
+            <label>Placa</label>
+            <input class="form-control" [(ngModel)]="filtros.placa"
+                   placeholder="ABC-1234" (keyup.enter)="buscar()" />
+          </div>
+          <div class="filtros-acoes">
+            <button class="btn btn-primary" (click)="buscar()">Buscar</button>
+            <button class="btn btn-outline" (click)="limpar()">Limpar</button>
+          </div>
+        </div>
       </div>
 
+      <!-- Tabela ──────────────────────────────────────── -->
       <div class="card">
         @if (loading) {
           <p style="color:var(--text-muted)">Carregando...</p>
-        } @else if (ordens.length === 0) {
+        } @else if (resultado.items.length === 0) {
           <div class="empty-state">Nenhuma ordem encontrada.</div>
         } @else {
           <div class="table-wrap">
@@ -43,7 +62,7 @@ import { OrdemServico, CreateOrdemDto, StatusOrdem, Veiculo } from '../../models
                 </tr>
               </thead>
               <tbody>
-                @for (o of ordens; track o.id) {
+                @for (o of resultado.items; track o.id) {
                   <tr>
                     <td>{{ o.id }}</td>
                     <td>{{ o.nomeCliente }}</td>
@@ -61,6 +80,13 @@ import { OrdemServico, CreateOrdemDto, StatusOrdem, Veiculo } from '../../models
               </tbody>
             </table>
           </div>
+
+          <app-paginacao
+            [pagina]="resultado.pagina"
+            [total]="resultado.total"
+            [tamanho]="resultado.tamanhoPagina"
+            [totalPaginas]="resultado.totalPaginas"
+            (paginaMudou)="irParaPagina($event)" />
         }
       </div>
     </div>
@@ -82,11 +108,12 @@ import { OrdemServico, CreateOrdemDto, StatusOrdem, Veiculo } from '../../models
             </div>
             <div class="form-group">
               <label>Descrição</label>
-              <input class="form-control" [(ngModel)]="formNova.descricao" placeholder="Ex: Troca de para-brisa dianteiro" />
+              <input class="form-control" [(ngModel)]="formNova.descricao"
+                     placeholder="Ex: Troca de para-brisa dianteiro" />
             </div>
             <div class="form-group">
               <label>Valor Estimado (R$)</label>
-              <input class="form-control" type="number" [(ngModel)]="formNova.valorEstimado" placeholder="0,00" />
+              <input class="form-control" type="number" [(ngModel)]="formNova.valorEstimado" />
             </div>
             <div class="form-group">
               <label>Observações</label>
@@ -137,19 +164,21 @@ import { OrdemServico, CreateOrdemDto, StatusOrdem, Veiculo } from '../../models
     }
   `,
   styles: [`
-    .filtros { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
-    code { background:var(--bg); padding:2px 6px; border-radius:4px;
-           font-family:monospace; font-size:13px; }
+    .filtros-card { margin-bottom: 16px; padding: 16px 20px; }
+    .filtros-grid { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 12px; align-items: flex-end; }
+    .filtros-acoes { display: flex; gap: 8px; }
+    code { background:var(--bg); padding:2px 6px; border-radius:4px; font-family:monospace; font-size:13px; }
   `]
 })
 export class OrdensComponent implements OnInit {
   private ordemSvc   = inject(OrdemService);
   private veiculoSvc = inject(VeiculoService);
 
-  ordens: OrdemServico[] = [];
-  veiculos: Veiculo[]    = [];
-  loading    = true;
-  filtroAtivo: StatusOrdem | undefined = undefined;
+  resultado: PagedResult<OrdemServico> = { items: [], total: 0, pagina: 1, tamanhoPagina: 10, totalPaginas: 0 };
+  filtros   = { status: '', cliente: '', placa: '' };
+  pagina    = 1;
+  veiculos: Veiculo[] = [];
+  loading   = true;
 
   modalNova   = false;
   modalStatus = false;
@@ -162,24 +191,25 @@ export class OrdensComponent implements OnInit {
 
   formNova: CreateOrdemDto = { descricao: '', valorEstimado: 0, veiculoId: 0 };
 
-  statusOpcoes = [
-    { valor: undefined,       label: 'Todos'       },
-    { valor: 'Aberta',        label: 'Abertas'      },
-    { valor: 'EmAndamento',   label: 'Em Andamento' },
-    { valor: 'Concluida',     label: 'Concluídas'   },
-    { valor: 'Cancelada',     label: 'Canceladas'   },
-  ] as { valor: StatusOrdem | undefined; label: string }[];
-
   ngOnInit() { this.carregar(); }
 
   carregar() {
     this.loading = true;
-    this.ordemSvc.listar(this.filtroAtivo).subscribe({
-      next: o => { this.ordens = o; this.loading = false; }
+    const query = {
+      status:  this.filtros.status  || undefined,
+      cliente: this.filtros.cliente || undefined,
+      placa:   this.filtros.placa   || undefined,
+      pagina:  this.pagina,
+      tamanho: 10
+    };
+    this.ordemSvc.listar(query).subscribe({
+      next: r => { this.resultado = r; this.loading = false; }
     });
   }
 
-  filtrar(s: StatusOrdem | undefined) { this.filtroAtivo = s; this.carregar(); }
+  buscar()                  { this.pagina = 1; this.carregar(); }
+  limpar()                  { this.filtros = { status: '', cliente: '', placa: '' }; this.buscar(); }
+  irParaPagina(p: number)   { this.pagina = p; this.carregar(); }
 
   abrirModalNova() {
     this.formNova = { descricao: '', valorEstimado: 0, veiculoId: 0 };
@@ -208,8 +238,7 @@ export class OrdensComponent implements OnInit {
     if (!this.ordemSelecionada) return;
     this.salvando = true;
     this.ordemSvc.atualizarStatus(this.ordemSelecionada.id, {
-      status: this.novoStatus,
-      valorFinal: this.valorFinal
+      status: this.novoStatus, valorFinal: this.valorFinal
     }).subscribe({
       next: () => { this.fecharModais(); this.carregar(); this.salvando = false; }
     });

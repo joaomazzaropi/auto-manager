@@ -10,9 +10,13 @@ namespace AutoManager.API.Controllers;
 [Authorize]
 public class ClientesController(IClienteService clienteService) : ControllerBase
 {
+    /// <summary>
+    /// Lista clientes com filtros e paginação.
+    /// Parâmetros: nome, cpf, pagina (default 1), tamanho (default 10)
+    /// </summary>
     [HttpGet]
-    public async Task<IActionResult> Listar() =>
-        Ok(await clienteService.ListarAsync());
+    public async Task<IActionResult> Listar([FromQuery] ClienteQueryParams query) =>
+        Ok(await clienteService.ListarAsync(query));
 
     [HttpGet("{id:int}")]
     public async Task<IActionResult> ObterPorId(int id)

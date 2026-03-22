@@ -7,7 +7,7 @@ namespace AutoManager.API.Services;
 
 public interface IOrdemServicoService
 {
-    Task<IEnumerable<OrdemDto>> ListarAsync(string? status);
+    Task<PagedResult<OrdemDto>> ListarAsync(OrdemQueryParams query);
     Task<OrdemDto?> ObterPorIdAsync(int id);
     Task<OrdemDto> CriarAsync(CreateOrdemDto dto);
     Task<OrdemDto?> AtualizarStatusAsync(int id, UpdateStatusOrdemDto dto);
@@ -15,32 +15,51 @@ public interface IOrdemServicoService
 
 public class OrdemServicoService(AppDbContext db) : IOrdemServicoService
 {
-    public async Task<IEnumerable<OrdemDto>> ListarAsync(string? status)
+    public async Task<PagedResult<OrdemDto>> ListarAsync(OrdemQueryParams query)
     {
-        var query = db.OrdensServico
+        var q = db.OrdensServico
             .AsNoTracking()
             .Include(o => o.Veiculo)
             .ThenInclude(v => v.Cliente)
             .AsQueryable();
 
-        if (!string.IsNullOrWhiteSpace(status) &&
-            Enum.TryParse<StatusOrdem>(status, true, out var statusEnum))
-        {
-            query = query.Where(o => o.Status == statusEnum);
-        }
+        // ── Filtros ──────────────────────────────────────────────────────────
+        if (!string.IsNullOrWhiteSpace(query.Status) &&
+            Enum.TryParse<StatusOrdem>(query.Status, true, out var statusEnum))
+            q = q.Where(o => o.Status == statusEnum);
 
-        return await query.Select(o => ToDto(o)).ToListAsync();
+        if (!string.IsNullOrWhiteSpace(query.Cliente))
+            q = q.Where(o => o.Veiculo.Cliente.Nome.ToLower()
+                               .Contains(query.Cliente.ToLower()));
+
+        if (!string.IsNullOrWhiteSpace(query.Placa))
+            q = q.Where(o => o.Veiculo.Placa.Contains(query.Placa.ToUpper()));
+
+        // ── Paginação ────────────────────────────────────────────────────────
+        var total   = await q.CountAsync();
+        var tamanho = Math.Clamp(query.Tamanho, 1, 100);
+        var pagina  = Math.Max(query.Pagina, 1);
+
+        var items = await q
+            .OrderByDescending(o => o.AbertaEm)
+            .Skip((pagina - 1) * tamanho)
+            .Take(tamanho)
+            .Select(o => ToDto(o))
+            .ToListAsync();
+
+        return new PagedResult<OrdemDto>(
+            items, total, pagina, tamanho,
+            (int)Math.Ceiling((double)total / tamanho));
     }
 
     public async Task<OrdemDto?> ObterPorIdAsync(int id)
     {
-        var ordem = await db.OrdensServico
+        var o = await db.OrdensServico
             .AsNoTracking()
-            .Include(o => o.Veiculo)
-            .ThenInclude(v => v.Cliente)
+            .Include(o => o.Veiculo).ThenInclude(v => v.Cliente)
             .FirstOrDefaultAsync(o => o.Id == id);
 
-        return ordem is null ? null : ToDto(ordem);
+        return o is null ? null : ToDto(o);
     }
 
     public async Task<OrdemDto> CriarAsync(CreateOrdemDto dto)
@@ -52,15 +71,14 @@ public class OrdemServicoService(AppDbContext db) : IOrdemServicoService
 
         var ordem = new OrdemServico
         {
-            Descricao = dto.Descricao,
-            ValorEstimado = dto.ValorEstimado,
-            Observacoes = dto.Observacoes,
-            VeiculoId = dto.VeiculoId
+            Descricao      = dto.Descricao,
+            ValorEstimado  = dto.ValorEstimado,
+            Observacoes    = dto.Observacoes,
+            VeiculoId      = dto.VeiculoId
         };
 
         db.OrdensServico.Add(ordem);
         await db.SaveChangesAsync();
-
         ordem.Veiculo = veiculo;
         return ToDto(ordem);
     }
@@ -68,8 +86,7 @@ public class OrdemServicoService(AppDbContext db) : IOrdemServicoService
     public async Task<OrdemDto?> AtualizarStatusAsync(int id, UpdateStatusOrdemDto dto)
     {
         var ordem = await db.OrdensServico
-            .Include(o => o.Veiculo)
-            .ThenInclude(v => v.Cliente)
+            .Include(o => o.Veiculo).ThenInclude(v => v.Cliente)
             .FirstOrDefaultAsync(o => o.Id == id);
 
         if (ordem is null) return null;
@@ -82,7 +99,7 @@ public class OrdemServicoService(AppDbContext db) : IOrdemServicoService
         if (novoStatus == StatusOrdem.Concluida)
         {
             ordem.ConcluidaEm = DateTime.UtcNow;
-            ordem.ValorFinal = dto.ValorFinal;
+            ordem.ValorFinal  = dto.ValorFinal;
         }
 
         await db.SaveChangesAsync();
@@ -90,17 +107,7 @@ public class OrdemServicoService(AppDbContext db) : IOrdemServicoService
     }
 
     private static OrdemDto ToDto(OrdemServico o) =>
-        new(
-            o.Id,
-            o.Descricao,
-            o.Status.ToString(),
-            o.ValorEstimado,
-            o.ValorFinal,
-            o.Observacoes,
-            o.AbertaEm,
-            o.ConcluidaEm,
-            o.VeiculoId,
-            o.Veiculo?.Placa ?? "",
-            o.Veiculo?.Cliente?.Nome ?? ""
-        );
+        new(o.Id, o.Descricao, o.Status.ToString(), o.ValorEstimado,
+            o.ValorFinal, o.Observacoes, o.AbertaEm, o.ConcluidaEm,
+            o.VeiculoId, o.Veiculo?.Placa ?? "", o.Veiculo?.Cliente?.Nome ?? "");
 }

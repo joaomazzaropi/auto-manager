@@ -1,8 +1,8 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import {
-  OrdemServico, CreateOrdemDto, UpdateStatusOrdemDto,
-  Veiculo, CreateVeiculoDto, StatusOrdem
+  OrdemServico, CreateOrdemDto, UpdateStatusOrdemDto, OrdemQuery, PagedResult,
+  Veiculo, CreateVeiculoDto
 } from '../models/models';
 import { environment } from '../../environments/environment';
 
@@ -24,13 +24,17 @@ export class OrdemService {
   private http = inject(HttpClient);
   private url  = `${environment.apiUrl}/ordensservico`;
 
-  listar(status?: StatusOrdem) {
-    const params = status ? new HttpParams().set('status', status) : undefined;
-    return this.http.get<OrdemServico[]>(this.url, { params });
+  listar(query: OrdemQuery = {}) {
+    let params = new HttpParams();
+    if (query.status)  params = params.set('status',  query.status);
+    if (query.cliente) params = params.set('cliente', query.cliente);
+    if (query.placa)   params = params.set('placa',   query.placa);
+    if (query.pagina)  params = params.set('pagina',  query.pagina!);
+    if (query.tamanho) params = params.set('tamanho', query.tamanho!);
+    return this.http.get<PagedResult<OrdemServico>>(this.url, { params });
   }
 
   obter(id: number) { return this.http.get<OrdemServico>(`${this.url}/${id}`); }
-
   criar(dto: CreateOrdemDto) { return this.http.post<OrdemServico>(this.url, dto); }
 
   atualizarStatus(id: number, dto: UpdateStatusOrdemDto) {

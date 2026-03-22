@@ -11,11 +11,12 @@ namespace AutoManager.API.Controllers;
 public class OrdensServicoController(IOrdemServicoService ordemService) : ControllerBase
 {
     /// <summary>
-    /// Lista ordens de serviço. Filtre por status: Aberta, EmAndamento, Concluida, Cancelada
+    /// Lista ordens de serviço com filtros e paginação.
+    /// Parâmetros: status, cliente, placa, pagina (default 1), tamanho (default 10)
     /// </summary>
     [HttpGet]
-    public async Task<IActionResult> Listar([FromQuery] string? status) =>
-        Ok(await ordemService.ListarAsync(status));
+    public async Task<IActionResult> Listar([FromQuery] OrdemQueryParams query) =>
+        Ok(await ordemService.ListarAsync(query));
 
     [HttpGet("{id:int}")]
     public async Task<IActionResult> ObterPorId(int id)

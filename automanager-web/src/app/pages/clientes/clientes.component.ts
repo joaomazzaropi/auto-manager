@@ -2,12 +2,13 @@ import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ClienteService } from '../../services/cliente.service';
-import { Cliente, CreateClienteDto } from '../../models/models';
+import { Cliente, CreateClienteDto, PagedResult } from '../../models/models';
+import { PaginacaoComponent } from '../../components/paginacao/paginacao.component';
 
 @Component({
   selector: 'app-clientes',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, PaginacaoComponent],
   template: `
     <div>
       <div class="page-header">
@@ -15,11 +16,32 @@ import { Cliente, CreateClienteDto } from '../../models/models';
         <button class="btn btn-primary" (click)="abrirModal()">+ Novo Cliente</button>
       </div>
 
+      <!-- Filtros ─────────────────────────────────────── -->
+      <div class="card filtros-card">
+        <div class="filtros-grid">
+          <div class="form-group">
+            <label>Nome</label>
+            <input class="form-control" [(ngModel)]="filtros.nome"
+                   placeholder="Buscar por nome..." (keyup.enter)="buscar()" />
+          </div>
+          <div class="form-group">
+            <label>CPF</label>
+            <input class="form-control" [(ngModel)]="filtros.cpf"
+                   placeholder="000.000.000-00" (keyup.enter)="buscar()" />
+          </div>
+          <div class="filtros-acoes">
+            <button class="btn btn-primary" (click)="buscar()">Buscar</button>
+            <button class="btn btn-outline" (click)="limpar()">Limpar</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tabela ──────────────────────────────────────── -->
       <div class="card">
         @if (loading) {
           <p style="color:var(--text-muted)">Carregando...</p>
-        } @else if (clientes.length === 0) {
-          <div class="empty-state">Nenhum cliente cadastrado ainda.</div>
+        } @else if (resultado.items.length === 0) {
+          <div class="empty-state">Nenhum cliente encontrado.</div>
         } @else {
           <div class="table-wrap">
             <table>
@@ -27,7 +49,7 @@ import { Cliente, CreateClienteDto } from '../../models/models';
                 <tr><th>Nome</th><th>CPF</th><th>Telefone</th><th>E-mail</th><th></th></tr>
               </thead>
               <tbody>
-                @for (c of clientes; track c.id) {
+                @for (c of resultado.items; track c.id) {
                   <tr>
                     <td>{{ c.nome }}</td>
                     <td>{{ c.cpf }}</td>
@@ -42,11 +64,18 @@ import { Cliente, CreateClienteDto } from '../../models/models';
               </tbody>
             </table>
           </div>
+
+          <app-paginacao
+            [pagina]="resultado.pagina"
+            [total]="resultado.total"
+            [tamanho]="resultado.tamanhoPagina"
+            [totalPaginas]="resultado.totalPaginas"
+            (paginaMudou)="irParaPagina($event)" />
         }
       </div>
     </div>
 
-    <!-- Modal ────────────────────────────────────────────── -->
+    <!-- Modal ────────────────────────────────────────── -->
     @if (modalAberto) {
       <div class="modal-backdrop" (click)="fecharModal()">
         <div class="modal" (click)="$event.stopPropagation()">
@@ -79,26 +108,39 @@ import { Cliente, CreateClienteDto } from '../../models/models';
         </div>
       </div>
     }
-  `
+  `,
+  styles: [`
+    .filtros-card { margin-bottom: 16px; padding: 16px 20px; }
+    .filtros-grid { display: grid; grid-template-columns: 1fr 1fr auto; gap: 12px; align-items: flex-end; }
+    .filtros-acoes { display: flex; gap: 8px; }
+  `]
 })
 export class ClientesComponent implements OnInit {
   private svc = inject(ClienteService);
 
-  clientes: Cliente[] = [];
-  loading = true;
+  resultado: PagedResult<Cliente> = { items: [], total: 0, pagina: 1, tamanhoPagina: 10, totalPaginas: 0 };
+  filtros   = { nome: '', cpf: '' };
+  pagina    = 1;
+  loading   = true;
+
   modalAberto = false;
   editando: Cliente | null = null;
   salvando = false;
   erro = '';
-
   form: CreateClienteDto = { nome: '', cpf: '', telefone: '', email: '' };
 
   ngOnInit() { this.carregar(); }
 
   carregar() {
     this.loading = true;
-    this.svc.listar().subscribe({ next: c => { this.clientes = c; this.loading = false; } });
+    this.svc.listar({ ...this.filtros, pagina: this.pagina, tamanho: 10 }).subscribe({
+      next: r => { this.resultado = r; this.loading = false; }
+    });
   }
+
+  buscar()           { this.pagina = 1; this.carregar(); }
+  limpar()           { this.filtros = { nome: '', cpf: '' }; this.buscar(); }
+  irParaPagina(p: number) { this.pagina = p; this.carregar(); }
 
   abrirModal(c?: Cliente) {
     this.editando = c ?? null;
