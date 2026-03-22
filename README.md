@@ -31,7 +31,8 @@ AutoManager/
 │   ├── Data/
 │   │   └── AppDbContext.cs
 │   ├── DTOs/
-│   │   └── Dtos.cs
+│   │   ├── Dtos.cs
+│   │   └── PaginacaoDtos.cs          # PagedResult<T> e query params
 │   ├── Entities/
 │   │   ├── Usuario.cs
 │   │   ├── Cliente.cs
@@ -55,6 +56,8 @@ AutoManager/
 └── automanager-web/                  # Frontend Angular
     └── src/app/
         ├── models/models.ts
+        ├── components/
+        │   └── paginacao/            # Componente de paginação reutilizável
         ├── services/
         │   ├── auth.service.ts
         │   ├── cliente.service.ts
@@ -69,9 +72,9 @@ AutoManager/
             ├── login/
             ├── register/
             ├── dashboard/            # Cards de resumo + OS abertas
-            ├── clientes/             # CRUD completo
+            ├── clientes/             # CRUD completo com filtros e paginação
             ├── veiculos/             # Cadastro e listagem
-            └── ordens/               # Gestão de OS com filtros
+            └── ordens/               # Gestão de OS com filtros e paginação
 ```
 
 ---
@@ -158,11 +161,13 @@ Para testar diretamente no Swagger:
 ### Clientes
 | Método | Rota | Descrição |
 |--------|------|-----------|
-| GET | `/api/clientes` | Listar todos |
+| GET | `/api/clientes` | Listar com filtros e paginação |
 | GET | `/api/clientes/{id}` | Buscar por ID |
 | POST | `/api/clientes` | Cadastrar |
 | PUT | `/api/clientes/{id}` | Atualizar |
 | DELETE | `/api/clientes/{id}` | Remover |
+
+**Parâmetros de filtro:** `?nome=` \| `?cpf=` \| `?pagina=` \| `?tamanho=`
 
 ### Veículos
 | Método | Rota | Descrição |
@@ -175,10 +180,12 @@ Para testar diretamente no Swagger:
 ### Ordens de Serviço
 | Método | Rota | Descrição |
 |--------|------|-----------|
-| GET | `/api/ordensservico` | Listar (filtro por `?status=`) |
+| GET | `/api/ordensservico` | Listar com filtros e paginação |
 | GET | `/api/ordensservico/{id}` | Buscar por ID |
 | POST | `/api/ordensservico` | Abrir nova OS |
 | PATCH | `/api/ordensservico/{id}/status` | Atualizar status |
+
+**Parâmetros de filtro:** `?status=` \| `?cliente=` \| `?placa=` \| `?pagina=` \| `?tamanho=`
 
 **Status disponíveis:** `Aberta` \| `EmAndamento` \| `Concluida` \| `Cancelada`
 
@@ -186,7 +193,6 @@ Para testar diretamente no Swagger:
 
 ## Próximos passos
 
-- [ ] Filtros e paginação nas listagens
 - [ ] Relatórios com queries estilo PL/SQL
 - [ ] Docker / docker-compose para facilitar o setup
 - [ ] Deploy com CI/CD
