@@ -4,11 +4,12 @@ import { FormsModule } from '@angular/forms';
 import { ClienteService } from '../../services/cliente.service';
 import { Cliente, CreateClienteDto, PagedResult } from '../../models/models';
 import { PaginacaoComponent } from '../../components/paginacao/paginacao.component';
+import { MaskDirective } from '../../directives/mask.directive';
 
 @Component({
   selector: 'app-clientes',
   standalone: true,
-  imports: [CommonModule, FormsModule, PaginacaoComponent],
+  imports: [CommonModule, FormsModule, PaginacaoComponent, MaskDirective],
   template: `
     <div>
       <div class="page-header">
@@ -16,7 +17,7 @@ import { PaginacaoComponent } from '../../components/paginacao/paginacao.compone
         <button class="btn btn-primary" (click)="abrirModal()">+ Novo Cliente</button>
       </div>
 
-      <!-- Filtros ─────────────────────────────────────── -->
+      <!-- Filtros -->
       <div class="card filtros-card">
         <div class="filtros-grid">
           <div class="form-group">
@@ -27,7 +28,7 @@ import { PaginacaoComponent } from '../../components/paginacao/paginacao.compone
           <div class="form-group">
             <label>CPF</label>
             <input class="form-control" [(ngModel)]="filtros.cpf"
-                   placeholder="000.000.000-00" (keyup.enter)="buscar()" />
+                   placeholder="000.000.000-00" appMask="cpf" (keyup.enter)="buscar()" />
           </div>
           <div class="filtros-acoes">
             <button class="btn btn-primary" (click)="buscar()">Buscar</button>
@@ -36,7 +37,7 @@ import { PaginacaoComponent } from '../../components/paginacao/paginacao.compone
         </div>
       </div>
 
-      <!-- Tabela ──────────────────────────────────────── -->
+      <!-- Tabela -->
       <div class="card">
         @if (loading) {
           <p style="color:var(--text-muted)">Carregando...</p>
@@ -64,7 +65,6 @@ import { PaginacaoComponent } from '../../components/paginacao/paginacao.compone
               </tbody>
             </table>
           </div>
-
           <app-paginacao
             [pagina]="resultado.pagina"
             [total]="resultado.total"
@@ -75,7 +75,7 @@ import { PaginacaoComponent } from '../../components/paginacao/paginacao.compone
       </div>
     </div>
 
-    <!-- Modal ────────────────────────────────────────── -->
+    <!-- Modal -->
     @if (modalAberto) {
       <div class="modal-backdrop" (click)="fecharModal()">
         <div class="modal" (click)="$event.stopPropagation()">
@@ -83,19 +83,23 @@ import { PaginacaoComponent } from '../../components/paginacao/paginacao.compone
           <div class="modal-form">
             <div class="form-group">
               <label>Nome</label>
-              <input class="form-control" [(ngModel)]="form.nome" placeholder="Nome completo" />
+              <input class="form-control" [(ngModel)]="form.nome"
+                     placeholder="Nome completo" maxlength="100" />
             </div>
             <div class="form-group">
               <label>CPF</label>
-              <input class="form-control" [(ngModel)]="form.cpf" placeholder="000.000.000-00" />
+              <input class="form-control" [(ngModel)]="form.cpf"
+                     placeholder="000.000.000-00" appMask="cpf" />
             </div>
             <div class="form-group">
               <label>Telefone</label>
-              <input class="form-control" [(ngModel)]="form.telefone" placeholder="(00) 00000-0000" />
+              <input class="form-control" [(ngModel)]="form.telefone"
+                     placeholder="(00) 00000-0000" appMask="telefone" />
             </div>
             <div class="form-group">
               <label>E-mail</label>
-              <input class="form-control" type="email" [(ngModel)]="form.email" placeholder="cliente@email.com" />
+              <input class="form-control" type="email" [(ngModel)]="form.email"
+                     placeholder="cliente@email.com" maxlength="100" />
             </div>
             @if (erro) { <div class="alert alert-error">{{ erro }}</div> }
           </div>
@@ -138,14 +142,15 @@ export class ClientesComponent implements OnInit {
     });
   }
 
-  buscar()           { this.pagina = 1; this.carregar(); }
-  limpar()           { this.filtros = { nome: '', cpf: '' }; this.buscar(); }
-  irParaPagina(p: number) { this.pagina = p; this.carregar(); }
+  buscar()                  { this.pagina = 1; this.carregar(); }
+  limpar()                  { this.filtros = { nome: '', cpf: '' }; this.buscar(); }
+  irParaPagina(p: number)   { this.pagina = p; this.carregar(); }
 
   abrirModal(c?: Cliente) {
     this.editando = c ?? null;
-    this.form = c ? { nome: c.nome, cpf: c.cpf, telefone: c.telefone, email: c.email }
-                  : { nome: '', cpf: '', telefone: '', email: '' };
+    this.form = c
+      ? { nome: c.nome, cpf: c.cpf, telefone: c.telefone, email: c.email }
+      : { nome: '', cpf: '', telefone: '', email: '' };
     this.erro = '';
     this.modalAberto = true;
   }

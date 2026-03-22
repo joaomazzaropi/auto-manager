@@ -15,7 +15,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         modelBuilder.Entity<Cliente>(e =>
         {
             e.HasIndex(c => c.Cpf).IsUnique();
-            e.Property(c => c.ValorEstimado); // ignorado - só em OS
         });
 
         modelBuilder.Entity<OrdemServico>(e =>
