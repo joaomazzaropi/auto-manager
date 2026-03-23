@@ -15,118 +15,86 @@ public interface IRelatorioService
 public class RelatorioService(AppDbContext db) : IRelatorioService
 {
     // ─── 1. Resumo por Status ─────────────────────────────────────────────────
-    // Equivalente PL/SQL:
-    //   SELECT Status,
-    //          COUNT(*)              AS Quantidade,
-    //          SUM(ValorEstimado)    AS ValorEstimadoTotal,
-    //          COALESCE(SUM(ValorFinal), 0) AS ValorFinalTotal
-    //   FROM OrdensServico
-    //   GROUP BY Status
-    //   ORDER BY Quantidade DESC
     public async Task<IEnumerable<RelatorioStatusDto>> ResumoByStatusAsync()
     {
-        var resultado = await db.OrdensServico
-            .GroupBy(o => o.Status)
+        var ordens = await db.OrdensServico.AsNoTracking().ToListAsync();
+
+        return ordens
+            .GroupBy(o => o.Status.ToString())
             .Select(g => new RelatorioStatusDto(
-                g.Key.ToString(),
+                g.Key,
                 g.Count(),
                 g.Sum(o => o.ValorEstimado),
                 g.Sum(o => o.ValorFinal ?? 0)
             ))
-            .OrderByDescending(r => r.Quantidade)
-            .ToListAsync();
-
-        return resultado;
+            .OrderByDescending(r => r.Quantidade);
     }
 
-    // ─── 2. Resumo por Período (últimos N meses) ──────────────────────────────
-    // Equivalente PL/SQL:
-    //   SELECT STRFTIME('%Y-%m', AbertaEm)   AS Periodo,
-    //          COUNT(*)                       AS OrdensAbertas,
-    //          SUM(CASE WHEN Status = 'Concluida' THEN 1 ELSE 0 END) AS OrdensConcluidas,
-    //          COALESCE(SUM(CASE WHEN Status = 'Concluida' THEN ValorFinal ELSE 0 END), 0) AS Faturamento
-    //   FROM OrdensServico
-    //   WHERE AbertaEm >= DATE('now', '-N months')
-    //   GROUP BY Periodo
-    //   ORDER BY Periodo DESC
+    // ─── 2. Resumo por Período ────────────────────────────────────────────────
     public async Task<IEnumerable<RelatorioPeriodoDto>> ResumoByPeriodoAsync(int meses)
     {
-        var corte = DateTime.UtcNow.AddMonths(-meses);
-
-        var resultado = await db.OrdensServico
+        var corte  = DateTime.UtcNow.AddMonths(-meses);
+        var ordens = await db.OrdensServico
+            .AsNoTracking()
             .Where(o => o.AbertaEm >= corte)
-            .GroupBy(o => new { o.AbertaEm.Year, o.AbertaEm.Month })
-            .Select(g => new RelatorioPeriodoDto(
-                $"{g.Key.Year}-{g.Key.Month:D2}",
-                g.Count(),
-                g.Count(o => o.Status.ToString() == "Concluida"),
-                g.Sum(o => o.Status.ToString() == "Concluida" ? (o.ValorFinal ?? 0) : 0)
-            ))
-            .OrderByDescending(r => r.Periodo)
             .ToListAsync();
 
-        return resultado;
+        return ordens
+            .GroupBy(o => $"{o.AbertaEm.Year}-{o.AbertaEm.Month:D2}")
+            .Select(g => new RelatorioPeriodoDto(
+                g.Key,
+                g.Count(),
+                g.Count(o => o.Status.ToString() == "Concluida"),
+                g.Where(o => o.Status.ToString() == "Concluida")
+                 .Sum(o => o.ValorFinal ?? 0)
+            ))
+            .OrderByDescending(r => r.Periodo);
     }
 
     // ─── 3. Ranking de Clientes ───────────────────────────────────────────────
-    // Equivalente PL/SQL:
-    //   SELECT c.Nome,
-    //          COUNT(os.Id)          AS TotalOrdens,
-    //          SUM(CASE WHEN os.Status = 'Concluida' THEN 1 ELSE 0 END) AS OrdensConcluidas,
-    //          COALESCE(SUM(os.ValorFinal), 0) AS TotalFaturado
-    //   FROM Clientes c
-    //   JOIN Veiculos v   ON v.ClienteId = c.Id
-    //   JOIN OrdensServico os ON os.VeiculoId = v.Id
-    //   GROUP BY c.Id, c.Nome
-    //   ORDER BY TotalFaturado DESC
-    //   FETCH FIRST :top ROWS ONLY
     public async Task<IEnumerable<RelatorioClienteDto>> RankingClientesAsync(int top)
     {
-        var resultado = await db.Clientes
-            .Select(c => new RelatorioClienteDto(
-                c.Nome,
-                c.Veiculos.SelectMany(v => v.OrdensServico).Count(),
-                c.Veiculos.SelectMany(v => v.OrdensServico)
-                           .Count(o => o.Status.ToString() == "Concluida"),
-                c.Veiculos.SelectMany(v => v.OrdensServico)
-                           .Sum(o => o.ValorFinal ?? 0)
-            ))
-            .Where(r => r.TotalOrdens > 0)
-            .OrderByDescending(r => r.TotalFaturado)
-            .Take(top)
+        var dados = await db.Clientes
+            .AsNoTracking()
+            .Include(c => c.Veiculos)
+            .ThenInclude(v => v.OrdensServico)
             .ToListAsync();
 
-        return resultado;
+        return dados
+            .Select(c =>
+            {
+                var ordens = c.Veiculos.SelectMany(v => v.OrdensServico).ToList();
+                return new RelatorioClienteDto(
+                    c.Nome,
+                    ordens.Count,
+                    ordens.Count(o => o.Status.ToString() == "Concluida"),
+                    ordens.Sum(o => o.ValorFinal ?? 0)
+                );
+            })
+            .Where(r => r.TotalOrdens > 0)
+            .OrderByDescending(r => r.TotalFaturado)
+            .Take(top);
     }
 
     // ─── 4. Veículos mais atendidos ───────────────────────────────────────────
-    // Equivalente PL/SQL:
-    //   SELECT v.Placa, v.Modelo, c.Nome,
-    //          COUNT(os.Id)          AS TotalOrdens,
-    //          COALESCE(SUM(os.ValorFinal), 0) AS TotalFaturado
-    //   FROM Veiculos v
-    //   JOIN Clientes c ON c.Id = v.ClienteId
-    //   JOIN OrdensServico os ON os.VeiculoId = v.Id
-    //   GROUP BY v.Id, v.Placa, v.Modelo, c.Nome
-    //   ORDER BY TotalOrdens DESC
-    //   FETCH FIRST :top ROWS ONLY
     public async Task<IEnumerable<RelatorioVeiculoDto>> VeiculosMaisAtendidosAsync(int top)
     {
-        var resultado = await db.Veiculos
+        var dados = await db.Veiculos
+            .AsNoTracking()
             .Include(v => v.Cliente)
             .Include(v => v.OrdensServico)
             .Where(v => v.OrdensServico.Any())
+            .ToListAsync();
+
+        return dados
             .Select(v => new RelatorioVeiculoDto(
                 v.Placa,
                 $"{v.Marca} {v.Modelo}",
                 v.Cliente.Nome,
-                v.OrdensServico.Count(),
+                v.OrdensServico.Count,
                 v.OrdensServico.Sum(o => o.ValorFinal ?? 0)
             ))
             .OrderByDescending(r => r.TotalOrdens)
-            .Take(top)
-            .ToListAsync();
-
-        return resultado;
+            .Take(top);
     }
 }

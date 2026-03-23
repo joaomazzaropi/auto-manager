@@ -6,20 +6,95 @@ AutoManager.API/*.db-shm
 AutoManager.API/*.db-wal
 AutoManager.Tests/bin/
 AutoManager.Tests/obj/
+
+# Visual Studio
 .vs/
 *.user
 *.suo
+*.userosscache
+*.sln.docstates
+*.userprefs
+
+# Rider
+.idea/
+*.DotSettings.user
+
+# NuGet
+*.nupkg
+*.snupkg
+**/packages/
+!**/packages/build/
+AutoManager.API/packages.lock.json
+AutoManager.Tests/packages.lock.json
+
+# Publicação
+AutoManager.API/publish/
+AutoManager.API/Properties/launchSettings.json
+
+# Logs
+*.log
+AutoManager.API/logs/
 
 # ─── Angular ──────────────────────────────────────────────────────────────────
 automanager-web/node_modules/
 automanager-web/dist/
 automanager-web/.angular/
+automanager-web/.sass-cache/
+automanager-web/connect.lock
+automanager-web/coverage/
+automanager-web/libpeerconnection.log
+automanager-web/npm-debug.log
+automanager-web/yarn-error.log
+automanager-web/testem.log
+automanager-web/.npmrc
+automanager-web/.yarn/
+automanager-web/.pnp.*
 automanager-web/*.js.map
 
 # ─── Scripts locais ───────────────────────────────────────────────────────────
 reorganizar.ps1
 reorganizar.sh
 
-# ─── Sistema ──────────────────────────────────────────────────────────────────
-.DS_Store
+# ─── Sistema operacional ──────────────────────────────────────────────────────
+# Windows
 Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+
+# ─── Editores ─────────────────────────────────────────────────────────────────
+# VSCode
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# Vim / Emacs
+*.swp
+*.swo
+*~
+\#*\#
+.#*
+
+# ─── Misc ─────────────────────────────────────────────────────────────────────
+*.tmp
+*.temp
+*.bak
+*.orig
+*.pid
