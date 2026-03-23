@@ -1,0 +1,33 @@
+services:
+
+  # ─── API .NET ──────────────────────────────────────────────────────────────
+  api:
+    build:
+      context: ./AutoManager.API
+      dockerfile: Dockerfile
+    container_name: automanager-api
+    ports:
+      - "5000:5000"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:5000
+      - ConnectionStrings__DefaultConnection=Data Source=/app/data/automanager.db
+    volumes:
+      # Banco SQLite persiste entre reinicializações
+      - automanager-db:/app/data
+    restart: unless-stopped
+
+  # ─── Frontend Angular ──────────────────────────────────────────────────────
+  web:
+    build:
+      context: ./automanager-web
+      dockerfile: Dockerfile
+    container_name: automanager-web
+    ports:
+      - "4200:80"
+    depends_on:
+      - api
+    restart: unless-stopped
+
+volumes:
+  automanager-db:

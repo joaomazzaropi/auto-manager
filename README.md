@@ -14,6 +14,7 @@ Projeto fullstack desenvolvido com **ASP.NET Core 8**, **Angular 17** e **SQLite
 | Autenticação | JWT Bearer + BCrypt |
 | Frontend | Angular 17 (Standalone Components) |
 | Testes | xUnit + FluentAssertions + EF InMemory |
+| Containerização | Docker + Docker Compose + Nginx |
 | Documentação | Swagger / OpenAPI |
 
 ---
@@ -27,6 +28,7 @@ Projeto fullstack desenvolvido com **ASP.NET Core 8**, **Angular 17** e **SQLite
 - **Autenticação JWT** com logout automático ao expirar a sessão
 - **Máscaras** de CPF, telefone e placa nos formulários
 - **18 testes unitários** cobrindo os services principais
+- **Docker Compose** para subir toda a aplicação com um único comando
 
 ---
 
@@ -57,6 +59,8 @@ AutoManager/
 │   │   ├── ClienteService.cs         # CRUD com filtros e paginação
 │   │   ├── OrdemServicoService.cs    # Gestão de OS e atualização de status
 │   │   └── RelatorioService.cs       # Queries estilo PL/SQL
+│   ├── Dockerfile                    # Imagem Docker da API
+│   ├── .dockerignore
 │   ├── Program.cs                    # Pipeline, DI, CORS, JWT, Swagger
 │   └── appsettings.json              # Connection string e config JWT
 │
@@ -68,50 +72,105 @@ AutoManager/
 │       ├── ClienteServiceTests.cs    # 9 testes
 │       └── OrdemServicoServiceTests.cs # 10 testes
 │
-└── automanager-web/                  # Frontend Angular
-    └── src/app/
-        ├── models/models.ts          # Interfaces TypeScript
-        ├── directives/
-        │   └── mask.directive.ts     # Máscaras: CPF, telefone, placa
-        ├── components/
-        │   ├── paginacao/            # Componente de paginação reutilizável
-        │   └── toast/                # Notificações globais
-        ├── services/
-        │   ├── auth.service.ts       # Login, register, token no localStorage
-        │   ├── cliente.service.ts    # Chamadas HTTP de clientes
-        │   ├── ordem.service.ts      # Chamadas HTTP de OS e veículos
-        │   ├── relatorio.service.ts  # Chamadas HTTP de relatórios
-        │   └── toast.service.ts      # Gerenciamento de notificações
-        ├── interceptors/
-        │   └── auth.interceptor.ts   # Injeta JWT e detecta sessão expirada
-        ├── guards/
-        │   └── auth.guard.ts         # Proteção de rotas privadas
-        ├── layout/shell/             # Sidebar + navegação principal
-        └── pages/
-            ├── login/
-            ├── register/
-            ├── dashboard/            # Cards de resumo + OS abertas
-            ├── clientes/             # CRUD completo com filtros e paginação
-            ├── veiculos/             # Cadastro com criação inline de cliente
-            ├── ordens/               # Gestão de OS com filtros e paginação
-            └── relatorios/           # Relatórios com gráfico e tabelas
+├── automanager-web/                  # Frontend Angular
+│   ├── src/app/
+│   │   ├── models/models.ts          # Interfaces TypeScript
+│   │   ├── directives/
+│   │   │   └── mask.directive.ts     # Máscaras: CPF, telefone, placa
+│   │   ├── components/
+│   │   │   ├── paginacao/            # Componente de paginação reutilizável
+│   │   │   └── toast/                # Notificações globais
+│   │   ├── services/
+│   │   │   ├── auth.service.ts       # Login, register, token no localStorage
+│   │   │   ├── cliente.service.ts    # Chamadas HTTP de clientes
+│   │   │   ├── ordem.service.ts      # Chamadas HTTP de OS e veículos
+│   │   │   ├── relatorio.service.ts  # Chamadas HTTP de relatórios
+│   │   │   └── toast.service.ts      # Gerenciamento de notificações
+│   │   ├── interceptors/
+│   │   │   └── auth.interceptor.ts   # Injeta JWT e detecta sessão expirada
+│   │   ├── guards/
+│   │   │   └── auth.guard.ts         # Proteção de rotas privadas
+│   │   ├── layout/shell/             # Sidebar + navegação principal
+│   │   └── pages/
+│   │       ├── login/
+│   │       ├── register/
+│   │       ├── dashboard/            # Cards de resumo + OS abertas
+│   │       ├── clientes/             # CRUD completo com filtros e paginação
+│   │       ├── veiculos/             # Cadastro com criação inline de cliente
+│   │       ├── ordens/               # Gestão de OS com filtros e paginação
+│   │       └── relatorios/           # Relatórios com gráfico e tabelas
+│   ├── Dockerfile                    # Imagem Docker do frontend (Nginx)
+│   └── nginx.conf                    # Configuração do servidor Nginx
+│
+└── docker-compose.yml                # Orquestra API + Frontend
 ```
 
 ---
 
 ## Como rodar
 
-### Pré-requisitos
+Existem duas formas de rodar o projeto: com **Docker** (recomendado, mais simples) ou **manualmente** (requer .NET e Node instalados).
+
+---
+
+### 🐳 Opção 1 — Docker (recomendado)
+
+A forma mais simples. Um único comando sobe a API e o frontend sem precisar instalar .NET ou Node.
+
+#### Pré-requisitos
+
+- [Docker Desktop](https://www.docker.com/products/docker-desktop) instalado e **rodando** (verifique o ícone na bandeja do sistema)
+
+#### Passos
+
+```bash
+# 1. Clone o repositório
+git clone https://github.com/joaomazzaropi/auto-manager.git
+
+# 2. Entre na raiz do projeto
+cd auto-manager
+
+# 3. Suba tudo com um único comando (na primeira vez demora ~2-3 minutos)
+docker-compose up --build
+```
+
+Quando aparecer `Now listening on: http://+:5000` no terminal, acesse:
+
+- **Sistema:** http://localhost:4200
+- **Swagger:** http://localhost:5000/swagger
+
+#### Outros comandos úteis
+
+```bash
+# Rodar em background (sem travar o terminal)
+docker-compose up --build -d
+
+# Ver os logs enquanto roda em background
+docker-compose logs -f
+
+# Parar os containers
+docker-compose down
+
+# Parar e remover o banco de dados (cuidado: apaga os dados)
+docker-compose down -v
+```
+
+> **Sobre o banco de dados:** o SQLite fica armazenado em um volume Docker chamado `automanager-db`. Isso significa que os dados **persistem** entre reinicializações — `docker-compose down` não apaga os dados, apenas `docker-compose down -v` apaga.
+
+---
+
+### Opção 2 — Execução manual
+
+Útil para desenvolvimento, já que permite alterar o código e ver as mudanças em tempo real.
+
+#### Pré-requisitos
 
 - [.NET 8 SDK](https://dotnet.microsoft.com/download)
 - [Node.js 18+](https://nodejs.org/) e Angular CLI (`npm install -g @angular/cli`)
 
-### Backend
+#### Backend
 
 ```bash
-# Clone o repositório
-git clone https://github.com/joaomazzaropi/auto-manager.git
-
 # Entre na pasta da API
 cd auto-manager/AutoManager.API
 
@@ -129,7 +188,7 @@ dotnet run
 
 Acesse o Swagger em: **http://localhost:5000/swagger**
 
-### Frontend
+#### Frontend
 
 ```bash
 # Em outro terminal, entre na pasta do frontend
@@ -144,7 +203,7 @@ ng serve
 
 Acesse o sistema em: **http://localhost:4200**
 
-### Testes
+#### Testes
 
 ```bash
 # Entre na pasta de testes
@@ -220,7 +279,7 @@ Para testar diretamente no Swagger:
 | GET | `/api/relatorios/clientes` | Clientes com mais OS e maior faturamento |
 | GET | `/api/relatorios/veiculos` | Veículos com mais atendimentos |
 
-**Parâmetros:** `?meses=6` (janela de tempo do relatório de período) \| `?top=10` (limite do ranking)
+**Parâmetros:** `?meses=6` (janela de tempo do período) \| `?top=10` (limite do ranking)
 
 ---
 
@@ -230,10 +289,10 @@ Para testar diretamente no Swagger:
 O Swagger não envia o token automaticamente. Clique em **Authorize** no topo direito, cole `Bearer {seu_token}` e confirme antes de executar qualquer endpoint protegido.
 
 **Por que preciso rodar com `set ASPNETCORE_ENVIRONMENT=Development`?**  
-Por padrão o .NET sobe em modo Production, e o Swagger só está habilitado em Development. Sem essa variável, `http://localhost:5000/swagger` retorna 404.
+Por padrão o .NET sobe em modo Production, e o Swagger só está habilitado em Development. Sem essa variável, `http://localhost:5000/swagger` retorna 404. No Docker isso já está configurado automaticamente.
 
 **O frontend está dando erro de CORS. O que fazer?**  
-Confirme que o `Program.cs` contém `app.UseCors("Angular")` posicionado antes de `app.UseAuthentication()`. Após corrigir, reinicie a API.
+Confirme que o `Program.cs` contém `app.UseCors("Angular")` posicionado antes de `app.UseAuthentication()`. Após corrigir, reinicie a API. Com Docker, o Nginx faz o proxy e CORS não é necessário.
 
 **Cadastrei uma OS como Concluída mas não apareceu no relatório de faturamento.**  
 O relatório só computa OS que têm o campo **Valor Final** preenchido. Ao atualizar o status para `Concluida`, certifique-se de informar o valor final no modal.
@@ -247,15 +306,17 @@ No modal de cadastro de veículo, se não houver clientes, um aviso aparece auto
 **Por que o projeto usa SQLite e não SQL Server ou PostgreSQL?**  
 SQLite foi escolhido para simplificar o setup local — não requer instalação de servidor de banco. Para um ambiente de produção, basta trocar a connection string e o provider do EF Core.
 
+**Os dados somem quando paro o Docker?**  
+Não. O banco SQLite fica em um volume Docker (`automanager-db`) que persiste entre reinicializações. Apenas `docker-compose down -v` apaga o volume e consequentemente os dados.
+
 ---
 
 ## Próximos passos
 
-- [ ] Docker / docker-compose para facilitar o setup
 - [ ] Deploy com CI/CD
 
 ---
 
 ## Autor
 
-Desenvolvido por mim, como projeto de portfólio.
+Desenvolvido por João Mazzaropi como projeto de portfólio.
