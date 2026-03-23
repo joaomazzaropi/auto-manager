@@ -12,10 +12,11 @@ export const routes: Routes = [
     loadComponent: () => import('./layout/shell/shell.component').then(m => m.ShellComponent),
     canActivate: [authGuard],
     children: [
-      { path: 'dashboard', loadComponent: () => import('./pages/dashboard/dashboard.component').then(m => m.DashboardComponent) },
-      { path: 'clientes',  loadComponent: () => import('./pages/clientes/clientes.component').then(m => m.ClientesComponent) },
-      { path: 'veiculos',  loadComponent: () => import('./pages/veiculos/veiculos.component').then(m => m.VeiculosComponent) },
-      { path: 'ordens',    loadComponent: () => import('./pages/ordens/ordens.component').then(m => m.OrdensComponent) },
+      { path: 'dashboard',  loadComponent: () => import('./pages/dashboard/dashboard.component').then(m => m.DashboardComponent) },
+      { path: 'clientes',   loadComponent: () => import('./pages/clientes/clientes.component').then(m => m.ClientesComponent) },
+      { path: 'veiculos',   loadComponent: () => import('./pages/veiculos/veiculos.component').then(m => m.VeiculosComponent) },
+      { path: 'ordens',     loadComponent: () => import('./pages/ordens/ordens.component').then(m => m.OrdensComponent) },
+      { path: 'relatorios', loadComponent: () => import('./pages/relatorios/relatorios.component').then(m => m.RelatoriosComponent) },
     ]
   },
 

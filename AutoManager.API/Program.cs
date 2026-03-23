@@ -16,6 +16,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IClienteService, ClienteService>();
 builder.Services.AddScoped<IOrdemServicoService, OrdemServicoService>();
+builder.Services.AddScoped<IRelatorioService, RelatorioService>();
 
 // ─── JWT ──────────────────────────────────────────────────────────────────────
 var jwtKey = builder.Configuration["Jwt:Key"]!;
@@ -37,15 +38,6 @@ builder.Services
     });
 
 builder.Services.AddAuthorization();
-
-// ─── CORS ─────────────────────────────────────────────────────────────────────
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("Angular", policy =>
-        policy.WithOrigins("http://localhost:4200")
-              .AllowAnyHeader()
-              .AllowAnyMethod());
-});
 
 // ─── Swagger com suporte a JWT ────────────────────────────────────────────────
 builder.Services.AddEndpointsApiExplorer();
@@ -87,10 +79,12 @@ using (var scope = app.Services.CreateScope())
 }
 
 // ─── Pipeline ─────────────────────────────────────────────────────────────────
-app.UseSwagger();
-app.UseSwaggerUI();
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
 
-app.UseCors("Angular");
 app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
