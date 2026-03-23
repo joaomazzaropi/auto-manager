@@ -1,0 +1,80 @@
+name: 🐳 Build e Publicar Imagens Docker
+
+on:
+  push:
+    branches: [ main ]
+
+env:
+  REGISTRY: ghcr.io
+  # O nome do repositório em minúsculas (ex: joaomazzaropi/auto-manager)
+  IMAGE_API: ghcr.io/${{ github.repository_owner }}/automanager-api
+  IMAGE_WEB: ghcr.io/${{ github.repository_owner }}/automanager-web
+
+jobs:
+  build-e-publicar:
+    name: Build e push das imagens
+    runs-on: ubuntu-latest
+
+    # Permissão para publicar no GitHub Container Registry
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      # 1. Baixa o código
+      - name: Checkout do código
+        uses: actions/checkout@v4
+
+      # 2. Login no GitHub Container Registry (ghcr.io)
+      - name: Login no GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # 3. Extrai metadados para as tags das imagens (ex: latest, sha-abc123)
+      - name: Metadados da imagem da API
+        id: meta-api
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_API }}
+          tags: |
+            type=raw,value=latest
+            type=sha,prefix=sha-
+
+      - name: Metadados da imagem do Frontend
+        id: meta-web
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_WEB }}
+          tags: |
+            type=raw,value=latest
+            type=sha,prefix=sha-
+
+      # 4. Build e push da imagem da API
+      - name: Build e push — API
+        uses: docker/build-push-action@v5
+        with:
+          context: ./AutoManager.API
+          dockerfile: ./AutoManager.API/Dockerfile
+          push: true
+          tags: ${{ steps.meta-api.outputs.tags }}
+          labels: ${{ steps.meta-api.outputs.labels }}
+
+      # 5. Build e push da imagem do Frontend
+      - name: Build e push — Frontend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./automanager-web
+          dockerfile: ./automanager-web/Dockerfile
+          push: true
+          tags: ${{ steps.meta-web.outputs.tags }}
+          labels: ${{ steps.meta-web.outputs.labels }}
+
+      # 6. Exibe as imagens publicadas no resumo do workflow
+      - name: Resumo
+        run: |
+          echo "### 🐳 Imagens publicadas" >> $GITHUB_STEP_SUMMARY
+          echo "- API: \`${{ env.IMAGE_API }}:latest\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Web: \`${{ env.IMAGE_WEB }}:latest\`" >> $GITHUB_STEP_SUMMARY

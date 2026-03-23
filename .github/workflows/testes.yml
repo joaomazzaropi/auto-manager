@@ -1,0 +1,35 @@
+name: ✅ Testes
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  testes:
+    name: Rodar testes unitários
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Baixa o código do repositório
+      - name: Checkout do código
+        uses: actions/checkout@v4
+
+      # 2. Instala o .NET 8
+      - name: Configurar .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      # 3. Restaura as dependências
+      - name: Restaurar dependências
+        run: dotnet restore AutoManager.Tests/AutoManager.Tests.csproj
+
+      # 4. Compila o projeto de testes
+      - name: Build
+        run: dotnet build AutoManager.Tests/AutoManager.Tests.csproj --no-restore
+
+      # 5. Executa os 18 testes unitários
+      - name: Executar testes
+        run: dotnet test AutoManager.Tests/AutoManager.Tests.csproj --no-build --verbosity normal
