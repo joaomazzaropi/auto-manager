@@ -113,7 +113,7 @@ Existem duas formas de rodar o projeto: com **Docker** (recomendado, mais simple
 
 ---
 
-### 🐳 Opção 1 — Docker (recomendado)
+### Opção 1 — Docker (recomendado)
 
 A forma mais simples. Um único comando sobe a API e o frontend sem precisar instalar .NET ou Node.
 
@@ -319,4 +319,4 @@ Não. O banco SQLite fica em um volume Docker (`automanager-db`) que persiste en
 
 ## Autor
 
-Desenvolvido por João Mazzaropi como projeto de portfólio.
+Desenvolvido por mim, como projeto de portfólio.
