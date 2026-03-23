@@ -22,14 +22,22 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
-      # 3. Restaura as dependências
-      - name: Restaurar dependências
+      # 3. Lista os arquivos para debug (remove após confirmar que funciona)
+      - name: Listar estrutura do projeto
+        run: find . -name "*.csproj" | sort
+
+      # 4. Restaura as dependências da API (necessário para o projeto de testes)
+      - name: Restaurar dependências da API
+        run: dotnet restore AutoManager.API/AutoManager.API.csproj
+
+      # 5. Restaura as dependências dos testes
+      - name: Restaurar dependências dos testes
         run: dotnet restore AutoManager.Tests/AutoManager.Tests.csproj
 
-      # 4. Compila o projeto de testes
+      # 6. Compila o projeto de testes
       - name: Build
         run: dotnet build AutoManager.Tests/AutoManager.Tests.csproj --no-restore
 
-      # 5. Executa os 18 testes unitários
+      # 7. Executa os 18 testes unitários
       - name: Executar testes
         run: dotnet test AutoManager.Tests/AutoManager.Tests.csproj --no-build --verbosity normal
