@@ -27,12 +27,14 @@ AutoManager/
 │   │   ├── AuthController.cs
 │   │   ├── ClientesController.cs
 │   │   ├── VeiculosController.cs
-│   │   └── OrdensServicoController.cs
+│   │   ├── OrdensServicoController.cs
+│   │   └── RelatoriosController.cs
 │   ├── Data/
 │   │   └── AppDbContext.cs
 │   ├── DTOs/
 │   │   ├── Dtos.cs
-│   │   └── PaginacaoDtos.cs          # PagedResult<T> e query params
+│   │   ├── PaginacaoDtos.cs          # PagedResult<T> e query params
+│   │   └── RelatorioDtos.cs          # Modelos dos relatórios
 │   ├── Entities/
 │   │   ├── Usuario.cs
 │   │   ├── Cliente.cs
@@ -41,7 +43,8 @@ AutoManager/
 │   ├── Services/
 │   │   ├── AuthService.cs
 │   │   ├── ClienteService.cs
-│   │   └── OrdemServicoService.cs
+│   │   ├── OrdemServicoService.cs
+│   │   └── RelatorioService.cs       # Queries estilo PL/SQL
 │   ├── Program.cs
 │   └── appsettings.json
 │
@@ -56,12 +59,15 @@ AutoManager/
 └── automanager-web/                  # Frontend Angular
     └── src/app/
         ├── models/models.ts
+        ├── directives/
+        │   └── mask.directive.ts     # Máscaras: CPF, telefone, placa
         ├── components/
         │   └── paginacao/            # Componente de paginação reutilizável
         ├── services/
         │   ├── auth.service.ts
         │   ├── cliente.service.ts
-        │   └── ordem.service.ts
+        │   ├── ordem.service.ts
+        │   └── relatorio.service.ts
         ├── interceptors/
         │   └── auth.interceptor.ts   # Injeta JWT automaticamente
         ├── guards/
@@ -73,8 +79,9 @@ AutoManager/
             ├── register/
             ├── dashboard/            # Cards de resumo + OS abertas
             ├── clientes/             # CRUD completo com filtros e paginação
-            ├── veiculos/             # Cadastro e listagem
-            └── ordens/               # Gestão de OS com filtros e paginação
+            ├── veiculos/             # Cadastro com criação inline de cliente
+            ├── ordens/               # Gestão de OS com filtros e paginação
+            └── relatorios/           # Relatórios com gráfico e tabelas
 ```
 
 ---
@@ -102,7 +109,8 @@ dotnet restore
 dotnet ef migrations add InitialCreate
 dotnet ef database update
 
-# Rode a aplicação
+# Rode a aplicação (modo desenvolvimento)
+set ASPNETCORE_ENVIRONMENT=Development
 dotnet run
 ```
 
@@ -126,13 +134,7 @@ Acesse o sistema em: **http://localhost:4200**
 ### Testes
 
 ```bash
-# Entre na pasta de testes
 cd auto-manager/AutoManager.Tests
-
-# Execute todos os testes
-dotnet test
-
-# Com resultado detalhado
 dotnet test --verbosity normal
 ```
 
@@ -167,7 +169,7 @@ Para testar diretamente no Swagger:
 | PUT | `/api/clientes/{id}` | Atualizar |
 | DELETE | `/api/clientes/{id}` | Remover |
 
-**Parâmetros de filtro:** `?nome=` \| `?cpf=` \| `?pagina=` \| `?tamanho=`
+**Filtros:** `?nome=` \| `?cpf=` \| `?pagina=` \| `?tamanho=`
 
 ### Veículos
 | Método | Rota | Descrição |
@@ -185,15 +187,24 @@ Para testar diretamente no Swagger:
 | POST | `/api/ordensservico` | Abrir nova OS |
 | PATCH | `/api/ordensservico/{id}/status` | Atualizar status |
 
-**Parâmetros de filtro:** `?status=` \| `?cliente=` \| `?placa=` \| `?pagina=` \| `?tamanho=`
+**Filtros:** `?status=` \| `?cliente=` \| `?placa=` \| `?pagina=` \| `?tamanho=`
 
 **Status disponíveis:** `Aberta` \| `EmAndamento` \| `Concluida` \| `Cancelada`
+
+### Relatórios
+| Método | Rota | Descrição |
+|--------|------|-----------|
+| GET | `/api/relatorios/status` | Resumo por status |
+| GET | `/api/relatorios/periodo` | Faturamento por mês |
+| GET | `/api/relatorios/clientes` | Ranking de clientes |
+| GET | `/api/relatorios/veiculos` | Veículos mais atendidos |
+
+**Parâmetros:** `?meses=6` (período) \| `?top=10` (ranking)
 
 ---
 
 ## Próximos passos
 
-- [ ] Relatórios com queries estilo PL/SQL
 - [ ] Docker / docker-compose para facilitar o setup
 - [ ] Deploy com CI/CD
 
