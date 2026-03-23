@@ -18,6 +18,18 @@ Projeto fullstack desenvolvido com **ASP.NET Core 8**, **Angular 17** e **SQLite
 
 ---
 
+## Funcionalidades
+
+- Cadastro e gestão de **clientes** com filtros e paginação
+- Cadastro de **veículos** com criação inline de cliente — sem precisar sair da tela
+- Abertura e acompanhamento de **ordens de serviço** com filtros por status, cliente e placa
+- **Relatórios** de faturamento por mês, ranking de clientes e veículos mais atendidos
+- **Autenticação JWT** com logout automático ao expirar a sessão
+- **Máscaras** de CPF, telefone e placa nos formulários
+- **18 testes unitários** cobrindo os services principais
+
+---
+
 ## Estrutura do Projeto
 
 ```
@@ -30,9 +42,9 @@ AutoManager/
 │   │   ├── OrdensServicoController.cs
 │   │   └── RelatoriosController.cs
 │   ├── Data/
-│   │   └── AppDbContext.cs
+│   │   └── AppDbContext.cs           # Contexto do EF Core
 │   ├── DTOs/
-│   │   ├── Dtos.cs
+│   │   ├── Dtos.cs                   # Objetos de transferência de dados
 │   │   ├── PaginacaoDtos.cs          # PagedResult<T> e query params
 │   │   └── RelatorioDtos.cs          # Modelos dos relatórios
 │   ├── Entities/
@@ -41,12 +53,12 @@ AutoManager/
 │   │   ├── Veiculo.cs
 │   │   └── OrdemServico.cs
 │   ├── Services/
-│   │   ├── AuthService.cs
-│   │   ├── ClienteService.cs
-│   │   ├── OrdemServicoService.cs
+│   │   ├── AuthService.cs            # Registro, login e geração de JWT
+│   │   ├── ClienteService.cs         # CRUD com filtros e paginação
+│   │   ├── OrdemServicoService.cs    # Gestão de OS e atualização de status
 │   │   └── RelatorioService.cs       # Queries estilo PL/SQL
-│   ├── Program.cs
-│   └── appsettings.json
+│   ├── Program.cs                    # Pipeline, DI, CORS, JWT, Swagger
+│   └── appsettings.json              # Connection string e config JWT
 │
 ├── AutoManager.Tests/                # Testes unitários
 │   ├── Helpers/
@@ -58,22 +70,23 @@ AutoManager/
 │
 └── automanager-web/                  # Frontend Angular
     └── src/app/
-        ├── models/models.ts
+        ├── models/models.ts          # Interfaces TypeScript
         ├── directives/
         │   └── mask.directive.ts     # Máscaras: CPF, telefone, placa
         ├── components/
-        │   └── paginacao/            # Componente de paginação reutilizável
+        │   ├── paginacao/            # Componente de paginação reutilizável
+        │   └── toast/                # Notificações globais
         ├── services/
-        │   ├── auth.service.ts
-        │   ├── cliente.service.ts
-        │   ├── ordem.service.ts
-        │   └── relatorio.service.ts
+        │   ├── auth.service.ts       # Login, register, token no localStorage
+        │   ├── cliente.service.ts    # Chamadas HTTP de clientes
+        │   ├── ordem.service.ts      # Chamadas HTTP de OS e veículos
+        │   ├── relatorio.service.ts  # Chamadas HTTP de relatórios
+        │   └── toast.service.ts      # Gerenciamento de notificações
         ├── interceptors/
-        │   └── auth.interceptor.ts   # Injeta JWT automaticamente
+        │   └── auth.interceptor.ts   # Injeta JWT e detecta sessão expirada
         ├── guards/
-        │   └── auth.guard.ts         # Proteção de rotas
-        ├── layout/
-        │   └── shell/                # Sidebar + navegação principal
+        │   └── auth.guard.ts         # Proteção de rotas privadas
+        ├── layout/shell/             # Sidebar + navegação principal
         └── pages/
             ├── login/
             ├── register/
@@ -105,11 +118,11 @@ cd auto-manager/AutoManager.API
 # Restaure os pacotes
 dotnet restore
 
-# Crie e aplique as migrations
+# Crie e aplique as migrations (gera o banco SQLite automaticamente)
 dotnet ef migrations add InitialCreate
 dotnet ef database update
 
-# Rode a aplicação (modo desenvolvimento)
+# Rode a aplicação em modo desenvolvimento (necessário para o Swagger)
 set ASPNETCORE_ENVIRONMENT=Development
 dotnet run
 ```
@@ -134,7 +147,13 @@ Acesse o sistema em: **http://localhost:4200**
 ### Testes
 
 ```bash
+# Entre na pasta de testes
 cd auto-manager/AutoManager.Tests
+
+# Execute todos os testes
+dotnet test
+
+# Com resultado detalhado por teste
 dotnet test --verbosity normal
 ```
 
@@ -142,13 +161,15 @@ dotnet test --verbosity normal
 
 ## Autenticação
 
-A API usa **JWT Bearer**. No frontend, o token é salvo automaticamente após o login e injetado em todas as requisições via interceptor.
+A API usa **JWT Bearer**. No frontend, o token é salvo automaticamente após o login e injetado em todas as requisições via interceptor. Quando o token expira, o sistema exibe um aviso e redireciona para o login automaticamente.
 
 Para testar diretamente no Swagger:
 
 1. Crie uma conta em `POST /api/auth/register`
-2. Faça login em `POST /api/auth/login` e copie o `token`
-3. Clique em **Authorize** e cole `Bearer {seu_token}`
+2. Faça login em `POST /api/auth/login` e copie o campo `token` da resposta
+3. Clique em **Authorize** no topo direito do Swagger
+4. Cole `Bearer {seu_token}` e confirme
+5. Agora todos os endpoints protegidos estão liberados para uso
 
 ---
 
@@ -169,7 +190,7 @@ Para testar diretamente no Swagger:
 | PUT | `/api/clientes/{id}` | Atualizar |
 | DELETE | `/api/clientes/{id}` | Remover |
 
-**Filtros:** `?nome=` \| `?cpf=` \| `?pagina=` \| `?tamanho=`
+**Filtros disponíveis:** `?nome=` \| `?cpf=` \| `?pagina=` \| `?tamanho=`
 
 ### Veículos
 | Método | Rota | Descrição |
@@ -187,19 +208,44 @@ Para testar diretamente no Swagger:
 | POST | `/api/ordensservico` | Abrir nova OS |
 | PATCH | `/api/ordensservico/{id}/status` | Atualizar status |
 
-**Filtros:** `?status=` \| `?cliente=` \| `?placa=` \| `?pagina=` \| `?tamanho=`
+**Filtros disponíveis:** `?status=` \| `?cliente=` \| `?placa=` \| `?pagina=` \| `?tamanho=`
 
 **Status disponíveis:** `Aberta` \| `EmAndamento` \| `Concluida` \| `Cancelada`
 
 ### Relatórios
 | Método | Rota | Descrição |
 |--------|------|-----------|
-| GET | `/api/relatorios/status` | Resumo por status |
-| GET | `/api/relatorios/periodo` | Faturamento por mês |
-| GET | `/api/relatorios/clientes` | Ranking de clientes |
-| GET | `/api/relatorios/veiculos` | Veículos mais atendidos |
+| GET | `/api/relatorios/status` | Quantidade e valores agrupados por status |
+| GET | `/api/relatorios/periodo` | Ordens abertas, concluídas e faturamento por mês |
+| GET | `/api/relatorios/clientes` | Clientes com mais OS e maior faturamento |
+| GET | `/api/relatorios/veiculos` | Veículos com mais atendimentos |
 
-**Parâmetros:** `?meses=6` (período) \| `?top=10` (ranking)
+**Parâmetros:** `?meses=6` (janela de tempo do relatório de período) \| `?top=10` (limite do ranking)
+
+---
+
+## FAQ
+
+**Por que o Swagger abre mas os endpoints retornam 401?**  
+O Swagger não envia o token automaticamente. Clique em **Authorize** no topo direito, cole `Bearer {seu_token}` e confirme antes de executar qualquer endpoint protegido.
+
+**Por que preciso rodar com `set ASPNETCORE_ENVIRONMENT=Development`?**  
+Por padrão o .NET sobe em modo Production, e o Swagger só está habilitado em Development. Sem essa variável, `http://localhost:5000/swagger` retorna 404.
+
+**O frontend está dando erro de CORS. O que fazer?**  
+Confirme que o `Program.cs` contém `app.UseCors("Angular")` posicionado antes de `app.UseAuthentication()`. Após corrigir, reinicie a API.
+
+**Cadastrei uma OS como Concluída mas não apareceu no relatório de faturamento.**  
+O relatório só computa OS que têm o campo **Valor Final** preenchido. Ao atualizar o status para `Concluida`, certifique-se de informar o valor final no modal.
+
+**Fui redirecionado para o login de repente. O que aconteceu?**  
+O token JWT expira em 8 horas. Quando isso ocorre, o sistema detecta a resposta 401 da API, exibe um aviso e redireciona automaticamente. Basta fazer login novamente.
+
+**Como cadastrar um veículo sem ter um cliente cadastrado antes?**  
+No modal de cadastro de veículo, se não houver clientes, um aviso aparece automaticamente com a opção de cadastrar um cliente inline — sem precisar trocar de tela. Após salvar o cliente, ele já fica vinculado ao veículo.
+
+**Por que o projeto usa SQLite e não SQL Server ou PostgreSQL?**  
+SQLite foi escolhido para simplificar o setup local — não requer instalação de servidor de banco. Para um ambiente de produção, basta trocar a connection string e o provider do EF Core.
 
 ---
 
