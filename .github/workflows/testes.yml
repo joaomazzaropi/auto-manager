@@ -28,8 +28,8 @@ jobs:
 
       # 4. Restaura as dependências da API
       - name: Restaurar dependências da API
-        run: dotnet restore AutoManager.API.csproj
+        run: dotnet restore AutoManager.API/AutoManager.API.csproj
 
       # 5. Compila o projeto
       - name: Build
-        run: dotnet build AutoManager.API.csproj --no-restore --configuration Release
+        run: dotnet build AutoManager.API/AutoManager.API.csproj --no-restore --configuration Release
