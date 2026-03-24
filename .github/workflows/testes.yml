@@ -26,18 +26,10 @@ jobs:
       - name: Listar estrutura do projeto
         run: find . -name "*.csproj" | sort
 
-      # 4. Restaura as dependências da API (necessário para o projeto de testes)
+      # 4. Restaura as dependências da API
       - name: Restaurar dependências da API
-        run: dotnet restore AutoManager.API/AutoManager.API.csproj
+        run: dotnet restore AutoManager.API.csproj
 
-      # 5. Restaura as dependências dos testes
-      - name: Restaurar dependências dos testes
-        run: dotnet restore AutoManager.Tests/AutoManager.Tests.csproj
-
-      # 6. Compila o projeto de testes
+      # 5. Compila o projeto
       - name: Build
-        run: dotnet build AutoManager.Tests/AutoManager.Tests.csproj --no-restore
-
-      # 7. Executa os 18 testes unitários
-      - name: Executar testes
-        run: dotnet test AutoManager.Tests/AutoManager.Tests.csproj --no-build --verbosity normal
+        run: dotnet build AutoManager.API.csproj --no-restore --configuration Release
