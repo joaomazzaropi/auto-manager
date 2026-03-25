@@ -3,6 +3,9 @@
 Sistema de gestão de ordens de serviço para oficinas automotivas.  
 Projeto fullstack desenvolvido com **ASP.NET Core 8**, **Angular 17** e **SQLite**.
 
+![CI - Testes](https://github.com/joaomazzaropi/auto-manager/actions/workflows/testes.yml/badge.svg)
+![CI - Docker](https://github.com/joaomazzaropi/auto-manager/actions/workflows/docker.yml/badge.svg)
+
 ---
 
 ## Stack
@@ -15,6 +18,7 @@ Projeto fullstack desenvolvido com **ASP.NET Core 8**, **Angular 17** e **SQLite
 | Frontend | Angular 17 (Standalone Components) |
 | Testes | xUnit + FluentAssertions + EF InMemory |
 | Containerização | Docker + Docker Compose + Nginx |
+| CI/CD | GitHub Actions |
 | Documentação | Swagger / OpenAPI |
 
 ---
@@ -29,6 +33,7 @@ Projeto fullstack desenvolvido com **ASP.NET Core 8**, **Angular 17** e **SQLite
 - **Máscaras** de CPF, telefone e placa nos formulários
 - **18 testes unitários** cobrindo os services principais
 - **Docker Compose** para subir toda a aplicação com um único comando
+- **CI/CD** com GitHub Actions — testes e build Docker automáticos a cada push
 
 ---
 
@@ -36,6 +41,11 @@ Projeto fullstack desenvolvido com **ASP.NET Core 8**, **Angular 17** e **SQLite
 
 ```
 AutoManager/
+├── .github/
+│   └── workflows/
+│       ├── testes.yml                # Roda os 18 testes a cada push
+│       └── docker.yml                # Build e push das imagens Docker
+│
 ├── AutoManager.API/                  # Backend .NET
 │   ├── Controllers/
 │   │   ├── AuthController.cs
@@ -124,13 +134,13 @@ A forma mais simples. Um único comando sobe a API e o frontend sem precisar ins
 #### Passos
 
 ```bash
-# 1. Clone o repositório
+# Clone o repositório
 git clone https://github.com/joaomazzaropi/auto-manager.git
 
-# 2. Entre na raiz do projeto
+# Entre na raiz do projeto
 cd auto-manager
 
-# 3. Suba tudo com um único comando (na primeira vez demora ~2-3 minutos)
+# Suba tudo com um único comando (na primeira vez demora ~2-3 minutos)
 docker-compose up --build
 ```
 
@@ -155,7 +165,7 @@ docker-compose down
 docker-compose down -v
 ```
 
-> **Sobre o banco de dados:** o SQLite fica armazenado em um volume Docker chamado `automanager-db`. Isso significa que os dados **persistem** entre reinicializações — `docker-compose down` não apaga os dados, apenas `docker-compose down -v` apaga.
+> **Sobre o banco de dados:** o SQLite fica armazenado em um volume Docker chamado `automanager-db`. Os dados **persistem** entre reinicializações — `docker-compose down` não apaga os dados, apenas `docker-compose down -v` apaga.
 
 ---
 
@@ -308,12 +318,6 @@ SQLite foi escolhido para simplificar o setup local — não requer instalação
 
 **Os dados somem quando paro o Docker?**  
 Não. O banco SQLite fica em um volume Docker (`automanager-db`) que persiste entre reinicializações. Apenas `docker-compose down -v` apaga o volume e consequentemente os dados.
-
----
-
-## Próximos passos
-
-- [ ] Deploy com CI/CD
 
 ---
 
